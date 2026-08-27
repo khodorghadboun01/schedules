@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Suivi Heures de Travail</title>
+<meta name="theme-color" content="#1b2a4a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ECRAN DE CONNEXION -->
+<div class="authScreen" id="authScreen">
+  <div class="card authCard">
+    <div class="authLogo">🕒</div>
+
+    <div id="authSigninBlock">
+      <h2>Connexion</h2>
+      <p class="muted">Accès sur invitation uniquement.</p>
+      <form id="authForm">
+        <label>Email
+          <input type="email" id="auth-email" required autocomplete="email">
+        </label>
+        <label>Mot de passe
+          <input type="password" id="auth-password" required autocomplete="current-password" minlength="6">
+        </label>
+        <div class="authError" id="authError" style="display:none"></div>
+        <div class="formActions">
+          <button type="submit" class="btn primary" id="authSubmit">Se connecter</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="authSetPasswordBlock" class="hidden">
+      <h2>Bienvenue 👋</h2>
+      <p class="muted">Choisissez votre mot de passe pour activer votre compte.</p>
+      <form id="setPasswordForm">
+        <label>Nouveau mot de passe
+          <input type="password" id="setpw-password" required autocomplete="new-password" minlength="6">
+        </label>
+        <label>Confirmez le mot de passe
+          <input type="password" id="setpw-confirm" required autocomplete="new-password" minlength="6">
+        </label>
+        <div class="authError" id="setpwError" style="display:none"></div>
+        <div class="formActions">
+          <button type="submit" class="btn primary" id="setpwSubmit">Valider le mot de passe</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="appRoot" class="hidden">
+
+<header class="topbar">
+  <div class="topbar-title">
+    <span class="logo">🕒</span>
+    <span>Suivi Heures</span>
+  </div>
+  <div class="topbar-cumul" id="topCumul">--</div>
+</header>
+
+<main id="app">
+
+  <!-- SAISIE -->
+  <section class="view" id="view-saisie">
+
+    <div class="card todayCard" id="todayCard"><!-- rendu par renderToday() --></div>
+
+    <button type="button" class="linkToggle" id="toggleManualForm">📅 Ajouter ou corriger un autre jour <span id="toggleManualArrow">▾</span></button>
+
+    <div class="card" id="manualFormCard" style="display:none">
+      <h2 id="formTitle">Nouvelle journée</h2>
+      <form id="entryForm">
+        <label>Date
+          <input type="date" id="f-date" required>
+        </label>
+
+        <div class="daybadge" id="f-daybadge"></div>
+
+        <label>Type de journée
+          <select id="f-type">
+            <option value="normal">Normal (avec entrée / sortie)</option>
+            <option value="conge">🌴 Congé</option>
+            <option value="ferie">🎌 Jour férié</option>
+            <option value="repos">🛌 Repos exceptionnel</option>
+            <option value="absence">🚫 Absence</option>
+          </select>
+        </label>
+
+        <div class="row2" id="f-timeRow">
+          <label>Heure d'entrée (Check In)
+            <div class="timePicker">
+              <select id="f-checkin-h" class="timeSel"></select><span class="timeColon">:</span><select id="f-checkin-m" class="timeSel"></select>
+            </div>
+          </label>
+          <label>Heure de sortie (Check Out)
+            <div class="timePicker">
+              <select id="f-checkout-h" class="timeSel"></select><span class="timeColon">:</span><select id="f-checkout-m" class="timeSel"></select>
+            </div>
+          </label>
+        </div>
+
+        <label>Heures requises (h)
+          <input type="number" id="f-required" step="0.01" min="0">
+        </label>
+
+        <label>Permissions de sortie (minutes)
+          <input type="number" id="f-permission" step="1" min="0" value="0">
+        </label>
+
+        <label>Notes
+          <textarea id="f-notes" rows="2" placeholder="Retard justifié, mission, etc."></textarea>
+        </label>
+
+        <div class="preview" id="f-preview"></div>
+
+        <div class="formActions">
+          <button type="submit" class="btn primary" id="f-submit">Enregistrer</button>
+          <button type="button" class="btn ghost" id="f-cancel" style="display:none">Annuler la modification</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- HISTORIQUE -->
+  <section class="view" id="view-historique">
+    <div class="card">
+      <div class="monthSwitcher">
+        <button class="btn icon" id="hist-prev">‹</button>
+        <div class="monthLabel" id="hist-monthLabel">--</div>
+        <button class="btn icon" id="hist-next">›</button>
+      </div>
+      <div class="histSummary" id="histSummary"></div>
+    </div>
+
+    <div class="card listCard">
+      <div class="dayList" id="hist-list"></div>
+      <div class="emptyState" id="hist-empty" style="display:none">Aucune entrée pour ce mois. Ajoutez-en une dans l'onglet Saisie, ou touchez un jour dans le Dashboard.</div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section class="view" id="view-dashboard">
+    <div class="card">
+      <div class="monthSwitcher">
+        <button class="btn icon" id="dash-prev">‹</button>
+        <div class="monthLabel" id="dash-monthLabel">--</div>
+        <button class="btn icon" id="dash-next">›</button>
+      </div>
+
+      <div class="progressWrap">
+        <div class="progressLabel"><span>Progression du mois</span><span id="progressPct">--</span></div>
+        <div class="progressBar"><div class="progressFill" id="progressFill"></div></div>
+      </div>
+
+      <div class="statsGrid">
+        <div class="stat">
+          <div class="stat-icon">⏱️</div>
+          <div class="stat-label">Heures travaillées</div>
+          <div class="stat-value" id="s-worked">--</div>
+        </div>
+        <div class="stat">
+          <div class="stat-icon">🎯</div>
+          <div class="stat-label">Heures requises</div>
+          <div class="stat-value" id="s-required">--</div>
+        </div>
+        <div class="stat">
+          <div class="stat-icon">🚀</div>
+          <div class="stat-label">Heures supplémentaires</div>
+          <div class="stat-value good" id="s-overtime">--</div>
+        </div>
+        <div class="stat">
+          <div class="stat-icon">⚖️</div>
+          <div class="stat-label">Écart du mois</div>
+          <div class="stat-value" id="s-diff">--</div>
+        </div>
+        <div class="stat">
+          <div class="stat-icon">🪪</div>
+          <div class="stat-label">Permissions cumulées</div>
+          <div class="stat-value" id="s-perm">--</div>
+        </div>
+        <div class="stat">
+          <div class="stat-icon">🏦</div>
+          <div class="stat-label">Cumul fin de mois</div>
+          <div class="stat-value" id="s-cumul">--</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="subhead">Calendrier du mois</div>
+      <div class="calWeekdays" id="calWeekdays"></div>
+      <div class="calGrid" id="calGrid"></div>
+      <div class="daysRow">
+        <div><span class="dot ok"></span> jour complet</div>
+        <div><span class="dot warn"></span> manque d'heures</div>
+        <div><span class="dot off"></span> repos</div>
+        <div><span class="dot leave"></span> congé / férié</div>
+        <div><span class="dot miss"></span> absence / non pointé</div>
+      </div>
+      <p class="muted" style="margin:10px 0 0">Touchez un jour pour l'ouvrir ou en ajouter un.</p>
+    </div>
+
+    <div class="card">
+      <div class="subhead">Alertes</div>
+      <ul class="alertList" id="alertList"></ul>
+    </div>
+  </section>
+
+  <!-- REGLAGES -->
+  <section class="view" id="view-reglages">
+    <div class="card">
+      <h2>Compte</h2>
+      <div class="userBar">
+        <span class="userEmail" id="userEmail">--</span>
+        <button type="button" class="btn ghost" id="btn-logout">Se déconnecter</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Réglages</h2>
+
+      <label>Heures requises par défaut (jour travaillé)
+        <input type="number" id="set-required" step="0.01" min="0">
+      </label>
+
+      <div class="subhead">Cycle mensuel (période de paie)</div>
+      <p class="muted">Dans l'entreprise, le mois ne va pas du 1er au 30. Indiquez le jour où commence le cycle : la période ira de ce jour au même jour (–1) du mois suivant. Ex. : 26 → chaque mois va du 26 au 25 du mois d'après. Mettez 1 pour un mois calendaire classique.</p>
+      <div class="row2">
+        <label>Le cycle commence le
+          <select id="set-cycle-start"></select>
+        </label>
+        <label>Le cycle se termine le
+          <input type="text" id="set-cycle-end" readonly>
+        </label>
+      </div>
+
+      <div class="subhead">Jours non travaillés par défaut</div>
+      <div class="weekdayPicker" id="weekdayPicker"></div>
+
+      <div class="formActions">
+        <button class="btn primary" id="set-save">Enregistrer les réglages</button>
+      </div>
+
+      <hr>
+
+      <div class="subhead">Sauvegarde des données</div>
+      <p class="muted">Vos données sont synchronisées avec votre compte en ligne. Exportez régulièrement une sauvegarde par précaution.</p>
+      <div class="formActions">
+        <button class="btn" id="btn-export">Exporter (JSON)</button>
+        <button class="btn" id="btn-export-csv">Exporter (CSV)</button>
+        <label class="btn fileBtn">Importer (JSON)
+          <input type="file" id="btn-import" accept="application/json" style="display:none">
+        </label>
+      </div>
+
+      <div class="formActions">
+        <button class="btn danger" id="btn-reset">Réinitialiser toutes les données</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<nav class="tabbar">
+  <button class="tab active" data-view="saisie">
+    <span>✏️</span><small>Saisie</small>
+  </button>
+  <button class="tab" data-view="historique">
+    <span>📋</span><small>Historique</small>
+  </button>
+  <button class="tab" data-view="dashboard">
+    <span>📊</span><small>Dashboard</small>
+  </button>
+  <button class="tab" data-view="reglages">
+    <span>⚙️</span><small>Réglages</small>
+  </button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

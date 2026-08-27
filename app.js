@@ -1,4 +1,4 @@
-/* ===== Suivi Heures de Travail — localStorage (cache) + Supabase (cloud) ===== */
+/* ===== Suivi Heures de Travail — localStorage (cache) + Supabase (cloud) + i18n ===== */
 
 const STORAGE_ENTRIES = 'wh_entries_v1';
 const STORAGE_SETTINGS = 'wh_settings_v1';
@@ -14,18 +14,340 @@ let authRedirectType = new URLSearchParams(window.location.hash.replace(/^#/, ''
 let currentUser = null;
 let lastSyncedEntryIds = new Set(); // pour détecter les suppressions à synchroniser
 
-const WEEKDAYS_FR = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
-const WEEKDAYS_SHORT = ['D','L','M','M','J','V','S'];
-const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-const MONTHS_FR_SHORT = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+// ================= I18N =================
 
-const TYPE_INFO = {
-  normal: { label: 'Normal', icon: '' },
-  conge: { label: 'Congé', icon: '🌴' },
-  ferie: { label: 'Férié', icon: '🎌' },
-  repos: { label: 'Repos exceptionnel', icon: '🛌' },
-  absence: { label: 'Absence', icon: '🚫' },
+const STORAGE_LANG = 'wh_lang_v1';
+let lang = localStorage.getItem(STORAGE_LANG) === 'en' ? 'en' : 'fr';
+
+const I18N = {
+  fr: {
+    page_title: 'Suivi Heures de Travail',
+    app_title: 'Suivi Heures',
+    auth_title: 'Connexion',
+    auth_subtitle: 'Accès sur invitation uniquement.',
+    auth_email: 'Email',
+    auth_password: 'Mot de passe',
+    auth_submit: 'Se connecter',
+    auth_generic_error: 'Une erreur est survenue.',
+    setpw_title: 'Bienvenue 👋',
+    setpw_subtitle: 'Choisissez votre mot de passe pour activer votre compte.',
+    setpw_new: 'Nouveau mot de passe',
+    setpw_confirm: 'Confirmez le mot de passe',
+    setpw_submit: 'Valider le mot de passe',
+    setpw_mismatch: 'Les deux mots de passe ne correspondent pas.',
+    setpw_error: 'Erreur lors de la mise à jour du mot de passe.',
+    nav_saisie: 'Saisie',
+    nav_historique: 'Historique',
+    nav_dashboard: 'Dashboard',
+    nav_reglages: 'Réglages',
+    today_sub: "Aujourd'hui",
+    toggle_manual_show: '📅 Ajouter ou corriger un autre jour ',
+    toggle_manual_hide: '📅 Masquer la saisie manuelle ',
+    form_title_new: 'Nouvelle journée',
+    form_title_edit: 'Modifier la journée',
+    label_date: 'Date',
+    label_type: 'Type de journée',
+    opt_normal: 'Normal (avec entrée / sortie)',
+    opt_conge: '🌴 Congé',
+    opt_ferie: '🎌 Jour férié',
+    opt_repos: '🛌 Repos exceptionnel',
+    opt_absence: '🚫 Absence',
+    label_checkin: "Heure d'entrée (Check In)",
+    label_checkout: 'Heure de sortie (Check Out)',
+    label_required: 'Heures requises (h)',
+    label_permission: 'Permissions de sortie (minutes)',
+    label_notes: 'Notes',
+    notes_placeholder: 'Retard justifié, mission, etc.',
+    btn_save: 'Enregistrer',
+    btn_update: 'Mettre à jour',
+    btn_cancel_edit: 'Annuler la modification',
+    day_off_rest: '😴 Jour de repos',
+    chip_worked_today: "💼 J'ai travaillé aujourd'hui",
+    absence_recorded: '🚫 Absence enregistrée',
+    btn_back_normal: '↺ Revenir à une journée normale',
+    btn_checkin: "Pointer l'arrivée",
+    btn_checkout: 'Pointer la sortie',
+    btn_cancel_checkin: "↺ Annuler l'arrivée",
+    label_arrivee: 'Arrivée',
+    label_sortie: 'Sortie',
+    sg_worked: 'Travaillé',
+    sg_required: 'Requis',
+    sg_diff: 'Écart',
+    sg_overtime: 'Supplémentaire',
+    btn_edit_perm_notes: '✎ Modifier / permission / notes',
+    btn_reset_day: '↺ Réinitialiser la journée',
+    btn_validate: '✓ Valider',
+    btn_cancel: 'Annuler',
+    invalid_time: 'Heure invalide',
+    time_updated: 'Heure mise à jour',
+    lbl_type_cap: 'Type',
+    lbl_required_hours_inline: 'heures requises',
+    lbl_net_day_inline: 'net du jour',
+    lbl_required_hours_cap: 'Heures requises',
+    msg_fill_checkin_checkout: "renseignez l'entrée et la sortie pour voir le calcul complet.",
+    lbl_permission_cap: 'Permission',
+    lbl_net_day_cap: 'Net du jour',
+    toast_checkin: 'Arrivée enregistrée à ',
+    toast_checkout: 'Sortie enregistrée à ',
+    toast_day_marked: 'Journée marquée : ',
+    toast_choose_date: 'Choisissez une date',
+    toast_day_updated: 'Journée modifiée',
+    toast_day_updated_existing: 'Journée mise à jour (date existante)',
+    toast_day_saved: 'Journée enregistrée',
+    toast_day_deleted: 'Journée supprimée',
+    toast_settings_saved: 'Réglages enregistrés',
+    toast_export_json: 'Export JSON téléchargé',
+    toast_export_csv: 'Export CSV téléchargé',
+    toast_import_success: 'Importation réussie',
+    toast_reset_done: 'Données réinitialisées',
+    toast_password_set: 'Mot de passe défini ✅',
+    toast_sync_error: '⚠️ Erreur de synchronisation',
+    toast_sync_error_settings: '⚠️ Erreur de synchronisation des réglages',
+    toast_load_error: '⚠️ Impossible de charger vos données',
+    confirm_reset_day: 'Réinitialiser les heures de la journée ?',
+    confirm_delete_day: 'Supprimer cette journée ?',
+    confirm_import: 'Importer remplacera toutes les données actuelles. Continuer ?',
+    confirm_reset_all_1: 'Supprimer définitivement toutes les journées enregistrées ?',
+    confirm_reset_all_2: 'Cette action est irréversible. Confirmer la suppression ?',
+    alert_invalid_file: 'Fichier invalide : ',
+    delete_title: 'Supprimer',
+    hist_empty: "Aucune entrée pour ce mois. Ajoutez-en une dans l'onglet Saisie, ou touchez un jour dans le Dashboard.",
+    day_notpunched: 'Non pointé',
+    day_inprogress: 'en cours',
+    top_cumul_prefix: 'Cumul : ',
+    cumul_label: 'Cumul',
+    dash_progress: 'Progression du mois',
+    stat_worked: 'Heures travaillées',
+    stat_required: 'Heures requises',
+    stat_overtime: 'Heures supplémentaires',
+    stat_diff: 'Écart du mois',
+    stat_perm: 'Permissions cumulées',
+    stat_cumul: 'Cumul fin de mois',
+    cal_title: 'Calendrier du mois',
+    legend_ok: 'jour complet',
+    legend_warn: "manque d'heures",
+    legend_off: 'repos',
+    legend_leave: 'congé / férié',
+    legend_miss: 'absence / non pointé',
+    cal_hint: "Touchez un jour pour l'ouvrir ou en ajouter un.",
+    alerts_title: 'Alertes',
+    account_title: 'Compte',
+    logout_btn: 'Se déconnecter',
+    settings_title: 'Réglages',
+    label_default_required: 'Heures requises par défaut (jour travaillé)',
+    cycle_title: 'Cycle mensuel (période de paie)',
+    cycle_desc: "Dans l'entreprise, le mois ne va pas du 1er au 30. Indiquez le jour où commence le cycle : la période ira de ce jour au même jour (–1) du mois suivant. Ex. : 26 → chaque mois va du 26 au 25 du mois d'après. Mettez 1 pour un mois calendaire classique.",
+    label_cycle_start: 'Le cycle commence le',
+    opt_cycle_calendar: '1er (mois calendaire)',
+    label_cycle_end: 'Le cycle se termine le',
+    cycle_end_last_day: 'dernier jour du mois',
+    offdays_title: 'Jours non travaillés par défaut',
+    btn_save_settings: 'Enregistrer les réglages',
+    backup_title: 'Sauvegarde des données',
+    backup_desc: 'Vos données sont synchronisées avec votre compte en ligne. Exportez régulièrement une sauvegarde par précaution.',
+    btn_export_json: 'Exporter (JSON)',
+    btn_export_csv: 'Exporter (CSV)',
+    btn_import_json: 'Importer (JSON)',
+    btn_reset_all: 'Réinitialiser toutes les données',
+    reset_confirm_title: 'Confirmer la réinitialisation',
+    reset_confirm_desc: 'Cette action supprime définitivement toutes vos journées enregistrées. Entrez votre mot de passe pour confirmer.',
+    wrong_password: 'Mot de passe incorrect.',
+    lang_title: 'Langue',
+    type_normal: 'Normal',
+    type_conge: 'Congé',
+    type_ferie: 'Férié',
+    type_repos: 'Repos exceptionnel',
+    type_absence: 'Absence',
+  },
+  en: {
+    page_title: 'Work Hours Tracker',
+    app_title: 'Time Tracking',
+    auth_title: 'Sign in',
+    auth_subtitle: 'Invite-only access.',
+    auth_email: 'Email',
+    auth_password: 'Password',
+    auth_submit: 'Sign in',
+    auth_generic_error: 'An error occurred.',
+    setpw_title: 'Welcome 👋',
+    setpw_subtitle: 'Choose your password to activate your account.',
+    setpw_new: 'New password',
+    setpw_confirm: 'Confirm password',
+    setpw_submit: 'Set password',
+    setpw_mismatch: 'The two passwords do not match.',
+    setpw_error: 'Error updating the password.',
+    nav_saisie: 'Entry',
+    nav_historique: 'History',
+    nav_dashboard: 'Dashboard',
+    nav_reglages: 'Settings',
+    today_sub: 'Today',
+    toggle_manual_show: '📅 Add or fix another day ',
+    toggle_manual_hide: '📅 Hide manual entry ',
+    form_title_new: 'New day',
+    form_title_edit: 'Edit day',
+    label_date: 'Date',
+    label_type: 'Day type',
+    opt_normal: 'Normal (check-in / check-out)',
+    opt_conge: '🌴 Leave',
+    opt_ferie: '🎌 Public holiday',
+    opt_repos: '🛌 Exceptional day off',
+    opt_absence: '🚫 Absence',
+    label_checkin: 'Check-in time',
+    label_checkout: 'Check-out time',
+    label_required: 'Required hours (h)',
+    label_permission: 'Exit permissions (minutes)',
+    label_notes: 'Notes',
+    notes_placeholder: 'Justified delay, mission, etc.',
+    btn_save: 'Save',
+    btn_update: 'Update',
+    btn_cancel_edit: 'Cancel edit',
+    day_off_rest: '😴 Day off',
+    chip_worked_today: '💼 I worked today',
+    absence_recorded: '🚫 Absence recorded',
+    btn_back_normal: '↺ Back to a normal day',
+    btn_checkin: 'Check in',
+    btn_checkout: 'Check out',
+    btn_cancel_checkin: '↺ Cancel check-in',
+    label_arrivee: 'Check-in',
+    label_sortie: 'Check-out',
+    sg_worked: 'Worked',
+    sg_required: 'Required',
+    sg_diff: 'Difference',
+    sg_overtime: 'Overtime',
+    btn_edit_perm_notes: '✎ Edit / permission / notes',
+    btn_reset_day: '↺ Reset the day',
+    btn_validate: '✓ Confirm',
+    btn_cancel: 'Cancel',
+    invalid_time: 'Invalid time',
+    time_updated: 'Time updated',
+    lbl_type_cap: 'Type',
+    lbl_required_hours_inline: 'required hours',
+    lbl_net_day_inline: 'net for the day',
+    lbl_required_hours_cap: 'Required hours',
+    msg_fill_checkin_checkout: 'fill in check-in and check-out to see the full calculation.',
+    lbl_permission_cap: 'Permission',
+    lbl_net_day_cap: 'Net for the day',
+    toast_checkin: 'Check-in recorded at ',
+    toast_checkout: 'Check-out recorded at ',
+    toast_day_marked: 'Day marked: ',
+    toast_choose_date: 'Choose a date',
+    toast_day_updated: 'Day updated',
+    toast_day_updated_existing: 'Day updated (existing date)',
+    toast_day_saved: 'Day saved',
+    toast_day_deleted: 'Day deleted',
+    toast_settings_saved: 'Settings saved',
+    toast_export_json: 'JSON export downloaded',
+    toast_export_csv: 'CSV export downloaded',
+    toast_import_success: 'Import successful',
+    toast_reset_done: 'Data reset',
+    toast_password_set: 'Password set ✅',
+    toast_sync_error: '⚠️ Sync error',
+    toast_sync_error_settings: '⚠️ Settings sync error',
+    toast_load_error: '⚠️ Unable to load your data',
+    confirm_reset_day: 'Reset the hours for this day?',
+    confirm_delete_day: 'Delete this day?',
+    confirm_import: 'Importing will replace all current data. Continue?',
+    confirm_reset_all_1: 'Permanently delete all recorded days?',
+    confirm_reset_all_2: 'This action is irreversible. Confirm deletion?',
+    alert_invalid_file: 'Invalid file: ',
+    delete_title: 'Delete',
+    hist_empty: 'No entries for this month. Add one in the Entry tab, or tap a day in the Dashboard.',
+    day_notpunched: 'Not clocked',
+    day_inprogress: 'in progress',
+    top_cumul_prefix: 'Balance: ',
+    cumul_label: 'Balance',
+    dash_progress: 'Progress this month',
+    stat_worked: 'Hours worked',
+    stat_required: 'Hours required',
+    stat_overtime: 'Overtime hours',
+    stat_diff: 'Difference this month',
+    stat_perm: 'Accumulated permissions',
+    stat_cumul: 'End-of-month balance',
+    cal_title: 'Month calendar',
+    legend_ok: 'full day',
+    legend_warn: 'missing hours',
+    legend_off: 'day off',
+    legend_leave: 'leave / holiday',
+    legend_miss: 'absence / not clocked',
+    cal_hint: 'Tap a day to open it or add one.',
+    alerts_title: 'Alerts',
+    account_title: 'Account',
+    logout_btn: 'Log out',
+    settings_title: 'Settings',
+    label_default_required: 'Default required hours (working day)',
+    cycle_title: 'Monthly cycle (pay period)',
+    cycle_desc: "At the company, the month doesn't run from the 1st to the 30th. Enter the day the cycle starts: the period will run from that day to the same day (–1) of the following month. E.g.: 26 → each month runs from the 26th to the 25th of the next month. Set 1 for a standard calendar month.",
+    label_cycle_start: 'The cycle starts on',
+    opt_cycle_calendar: '1st (calendar month)',
+    label_cycle_end: 'The cycle ends on',
+    cycle_end_last_day: 'last day of the month',
+    offdays_title: 'Default non-working days',
+    btn_save_settings: 'Save settings',
+    backup_title: 'Data backup',
+    backup_desc: 'Your data is synced with your online account. Export a backup regularly as a precaution.',
+    btn_export_json: 'Export (JSON)',
+    btn_export_csv: 'Export (CSV)',
+    btn_import_json: 'Import (JSON)',
+    btn_reset_all: 'Reset all data',
+    reset_confirm_title: 'Confirm reset',
+    reset_confirm_desc: 'This action permanently deletes all your recorded days. Enter your password to confirm.',
+    wrong_password: 'Incorrect password.',
+    lang_title: 'Language',
+    type_normal: 'Normal',
+    type_conge: 'Leave',
+    type_ferie: 'Holiday',
+    type_repos: 'Exceptional day off',
+    type_absence: 'Absence',
+  },
 };
+
+function t(key) {
+  return (I18N[lang] && I18N[lang][key] !== undefined) ? I18N[lang][key] : (I18N.fr[key] || key);
+}
+
+const WEEKDAYS_MAP = {
+  fr: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'],
+  en: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+};
+const WEEKDAYS_SHORT_MAP = {
+  fr: ['D', 'L', 'M', 'M', 'J', 'V', 'S'],
+  en: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
+};
+const MONTHS_MAP = {
+  fr: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'],
+  en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+};
+const MONTHS_SHORT_MAP = {
+  fr: ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'],
+  en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+};
+
+function weekdaysFull() { return WEEKDAYS_MAP[lang]; }
+function weekdaysShort() { return WEEKDAYS_SHORT_MAP[lang]; }
+function monthsFull() { return MONTHS_MAP[lang]; }
+function monthsShort() { return MONTHS_SHORT_MAP[lang]; }
+
+const TYPE_ICONS = { normal: '', conge: '🌴', ferie: '🎌', repos: '🛌', absence: '🚫' };
+function typeIcon(type) { return TYPE_ICONS[type] || ''; }
+function typeLabel(type) { return t('type_' + type); }
+
+// remplace le noeud texte direct d'un élément (préserve ses éventuels enfants HTML)
+function setI18nText(el, key) {
+  const text = t(key);
+  const node = [...el.childNodes].find(n => n.nodeType === Node.TEXT_NODE);
+  if (node) node.nodeValue = text;
+  else el.insertBefore(document.createTextNode(text), el.firstChild);
+}
+
+function applyStaticTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach(el => setI18nText(el, el.dataset.i18n));
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+  document.documentElement.lang = lang;
+  document.title = t('page_title');
+}
+
+applyStaticTranslations();
 
 // ---------- storage ----------
 
@@ -57,7 +379,7 @@ async function saveSettings(s) {
     if (error) throw error;
   } catch (err) {
     console.error('Sync settings error', err);
-    toast('⚠️ Erreur de synchronisation des réglages');
+    toast(t('toast_sync_error_settings'));
   }
 }
 
@@ -92,7 +414,7 @@ async function saveEntries(list) {
     }
   } catch (err) {
     console.error('Sync entries error', err);
-    toast('⚠️ Erreur de synchronisation');
+    toast(t('toast_sync_error'));
   }
 }
 
@@ -182,7 +504,7 @@ function isOffDay(dateStr) {
 function longDateFR(dateStr) {
   const [y, m, d] = dateStr.split('-').map(Number);
   const dow = new Date(y, m - 1, d).getDay();
-  return `${WEEKDAYS_FR[dow]} ${d} ${MONTHS_FR[m - 1]}`;
+  return `${weekdaysFull()[dow]} ${d} ${monthsFull()[m - 1]}`;
 }
 
 function dateStrOf(dateObj) {
@@ -203,11 +525,11 @@ function periodBounds(cursor) {
 function periodLabel(cursor) {
   const { start, end } = periodBounds(cursor);
   if (cycleStartDay() === 1) {
-    return `${MONTHS_FR[start.getMonth()]} ${start.getFullYear()}`;
+    return `${monthsFull()[start.getMonth()]} ${start.getFullYear()}`;
   }
   const sameYear = start.getFullYear() === end.getFullYear();
-  const left = `${start.getDate()} ${MONTHS_FR_SHORT[start.getMonth()]}${sameYear ? '' : ' ' + start.getFullYear()}`;
-  const right = `${end.getDate()} ${MONTHS_FR_SHORT[end.getMonth()]} ${end.getFullYear()}`;
+  const left = `${start.getDate()} ${monthsShort()[start.getMonth()]}${sameYear ? '' : ' ' + start.getFullYear()}`;
+  const right = `${end.getDate()} ${monthsShort()[end.getMonth()]} ${end.getFullYear()}`;
   return `${left} – ${right}`;
 }
 
@@ -384,72 +706,71 @@ function renderToday() {
 
   const head = `
     <div class="today-head"><div class="today-date">${longDateFR(dateStr)}</div></div>
-    <div class="today-sub">Aujourd'hui</div>`;
+    <div class="today-sub">${t('today_sub')}</div>`;
 
   // jour de repos implicite (weekend), rien d'enregistré
   if (type === 'off-implicit') {
     card.innerHTML = head + `
-      <div class="statusBadge off">😴 Jour de repos</div>
+      <div class="statusBadge off">${t('day_off_rest')}</div>
       <div class="chipRow">
-        <button class="chip" onclick="quickForceWork()">💼 J'ai travaillé aujourd'hui</button>
-        <button class="chip" onclick="quickSetType('conge')">🌴 Congé</button>
-        <button class="chip" onclick="quickSetType('absence')">🚫 Absence</button>
+        <button class="chip" onclick="quickForceWork()">${t('chip_worked_today')}</button>
+        <button class="chip" onclick="quickSetType('conge')">${typeIcon('conge')} ${typeLabel('conge')}</button>
+        <button class="chip" onclick="quickSetType('absence')">${typeIcon('absence')} ${typeLabel('absence')}</button>
       </div>`;
     return;
   }
 
   // congé / férié / repos exceptionnel explicitement marqué
   if (type === 'conge' || type === 'ferie' || type === 'repos') {
-    const info = TYPE_INFO[type];
     card.innerHTML = head + `
-      <div class="statusBadge leave">${info.icon} ${info.label}</div>
-      <button class="smallLink" onclick="quickResetToday()">↺ Revenir à une journée normale</button>`;
+      <div class="statusBadge leave">${typeIcon(type)} ${typeLabel(type)}</div>
+      <button class="smallLink" onclick="quickResetToday()">${t('btn_back_normal')}</button>`;
     return;
   }
 
   // absence explicite
   if (type === 'absence') {
     card.innerHTML = head + `
-      <div class="statusBadge absence">🚫 Absence enregistrée</div>
-      <button class="smallLink" onclick="quickResetToday()">↺ Revenir à une journée normale</button>`;
+      <div class="statusBadge absence">${t('absence_recorded')}</div>
+      <button class="smallLink" onclick="quickResetToday()">${t('btn_back_normal')}</button>`;
     return;
   }
 
   // journée normale : pas encore de check-in
   if (!entry || !entry.checkIn) {
     card.innerHTML = head + `
-      <button class="bigAction checkin" onclick="quickCheckIn()"><span class="ic">🟢</span> Pointer l'arrivée</button>
+      <button class="bigAction checkin" onclick="quickCheckIn()"><span class="ic">🟢</span> ${t('btn_checkin')}</button>
       <div class="chipRow">
-        <button class="chip" onclick="quickSetType('conge')">🌴 Congé</button>
-        <button class="chip" onclick="quickSetType('ferie')">🎌 Férié</button>
-        <button class="chip" onclick="quickSetType('repos')">🛌 Repos</button>
-        <button class="chip" onclick="quickSetType('absence')">🚫 Absence</button>
+        <button class="chip" onclick="quickSetType('conge')">${typeIcon('conge')} ${typeLabel('conge')}</button>
+        <button class="chip" onclick="quickSetType('ferie')">${typeIcon('ferie')} ${typeLabel('ferie')}</button>
+        <button class="chip" onclick="quickSetType('repos')">${typeIcon('repos')} ${typeLabel('repos')}</button>
+        <button class="chip" onclick="quickSetType('absence')">${typeIcon('absence')} ${typeLabel('absence')}</button>
       </div>`;
     return;
   }
 
   // check-in fait, pas encore de check-out
   if (entry.checkIn && !entry.checkOut) {
-    card.innerHTML = head + renderTimePill('checkIn', entry.checkIn, 'Arrivée') + `
-      <button class="bigAction checkout" onclick="quickCheckOut()"><span class="ic">🔴</span> Pointer la sortie</button>
-      <button class="smallLink danger" onclick="quickResetToday()">↺ Annuler l'arrivée</button>`;
+    card.innerHTML = head + renderTimePill('checkIn', entry.checkIn, t('label_arrivee')) + `
+      <button class="bigAction checkout" onclick="quickCheckOut()"><span class="ic">🔴</span> ${t('btn_checkout')}</button>
+      <button class="smallLink danger" onclick="quickResetToday()">${t('btn_cancel_checkin')}</button>`;
     return;
   }
 
   // journée complète : résumé
   const c = computeEntry(entry);
   card.innerHTML = head +
-    renderTimePill('checkIn', entry.checkIn, 'Arrivée') +
-    renderTimePill('checkOut', entry.checkOut, 'Sortie') +
+    renderTimePill('checkIn', entry.checkIn, t('label_arrivee')) +
+    renderTimePill('checkOut', entry.checkOut, t('label_sortie')) +
     `<div class="summaryGrid">
-      <div class="mini"><div class="ml">Travaillé</div><div class="mv">${fmtHM(c.workedMin)}</div></div>
-      <div class="mini"><div class="ml">Requis</div><div class="mv">${fmtHM(c.requiredMin)}</div></div>
-      <div class="mini"><div class="ml">Écart</div><div class="mv ${c.diffMin >= 0 ? 'pos' : 'neg'}">${fmtHM(c.diffMin, true)}</div></div>
-      <div class="mini"><div class="ml">Supplémentaire</div><div class="mv">${fmtHM(c.overtimeMin)}</div></div>
+      <div class="mini"><div class="ml">${t('sg_worked')}</div><div class="mv">${fmtHM(c.workedMin)}</div></div>
+      <div class="mini"><div class="ml">${t('sg_required')}</div><div class="mv">${fmtHM(c.requiredMin)}</div></div>
+      <div class="mini"><div class="ml">${t('sg_diff')}</div><div class="mv ${c.diffMin >= 0 ? 'pos' : 'neg'}">${fmtHM(c.diffMin, true)}</div></div>
+      <div class="mini"><div class="ml">${t('sg_overtime')}</div><div class="mv">${fmtHM(c.overtimeMin)}</div></div>
     </div>
     <div class="rowActions">
-      <button class="smallLink" onclick="openManualEdit('${entry.id}')">✎ Modifier / permission / notes</button>
-      <button class="smallLink danger" onclick="quickResetToday()">↺ Réinitialiser la journée</button>
+      <button class="smallLink" onclick="openManualEdit('${entry.id}')">${t('btn_edit_perm_notes')}</button>
+      <button class="smallLink danger" onclick="quickResetToday()">${t('btn_reset_day')}</button>
     </div>`;
 }
 
@@ -462,8 +783,8 @@ function renderTimePill(field, value, label) {
         <select id="todayTimeInputH" class="timeSel">${hourOptions(h)}</select><span class="timeColon">:</span><select id="todayTimeInputM" class="timeSel">${minuteOptions(m)}</select>
       </div>
       <div class="editRow">
-        <button class="btn primary" style="padding:9px" onclick="saveEditTime('${field}')">✓ Valider</button>
-        <button class="btn ghost" style="padding:9px" onclick="cancelEditTime()">Annuler</button>
+        <button class="btn primary" style="padding:9px" onclick="saveEditTime('${field}')">${t('btn_validate')}</button>
+        <button class="btn ghost" style="padding:9px" onclick="cancelEditTime()">${t('btn_cancel')}</button>
       </div>
     </div>`;
   }
@@ -475,17 +796,17 @@ function renderTimePill(field, value, label) {
 }
 
 function quickCheckIn() {
-  const t = nowHM();
-  upsertEntryForDate(todayStr(), { checkIn: t, type: 'normal' });
-  toast('Arrivée enregistrée à ' + t);
+  const tm = nowHM();
+  upsertEntryForDate(todayStr(), { checkIn: tm, type: 'normal' });
+  toast(t('toast_checkin') + tm);
   renderToday();
   refreshAll();
 }
 
 function quickCheckOut() {
-  const t = nowHM();
-  upsertEntryForDate(todayStr(), { checkOut: t });
-  toast('Sortie enregistrée à ' + t);
+  const tm = nowHM();
+  upsertEntryForDate(todayStr(), { checkOut: tm });
+  toast(t('toast_checkout') + tm);
   renderToday();
   refreshAll();
 }
@@ -499,7 +820,7 @@ function quickSetType(type) {
   const dateStr = todayStr();
   const req = type === 'absence' ? (isOffDay(dateStr) ? 0 : settings.requiredHours) : 0;
   upsertEntryForDate(dateStr, { type, checkIn: '', checkOut: '', required: req });
-  toast('Journée marquée : ' + TYPE_INFO[type].label);
+  toast(t('toast_day_marked') + typeLabel(type));
   renderToday();
   refreshAll();
 }
@@ -508,7 +829,7 @@ function quickResetToday() {
   const dateStr = todayStr();
   const e = entryForDate(dateStr);
   if (e && e.checkIn && e.checkOut) {
-    if (!confirm('Réinitialiser les heures de la journée ?')) return;
+    if (!confirm(t('confirm_reset_day'))) return;
   }
   entries = entries.filter(x => x.date !== dateStr);
   saveEntries(entries);
@@ -531,10 +852,10 @@ function cancelEditTime() {
 function saveEditTime(field) {
   const hEl = document.getElementById('todayTimeInputH');
   const mEl = document.getElementById('todayTimeInputM');
-  if (!hEl || !mEl) { toast('Heure invalide'); return; }
+  if (!hEl || !mEl) { toast(t('invalid_time')); return; }
   upsertEntryForDate(todayStr(), { [field]: hEl.value + ':' + mEl.value });
   todayEditingField = null;
-  toast('Heure mise à jour');
+  toast(t('time_updated'));
   renderToday();
   refreshAll();
 }
@@ -558,7 +879,7 @@ manualToggleBtn.addEventListener('click', () => {
 function setManualFormVisible(visible) {
   manualCard.style.display = visible ? 'block' : 'none';
   manualArrow.textContent = visible ? '▴' : '▾';
-  manualToggleBtn.firstChild.textContent = visible ? '📅 Masquer la saisie manuelle ' : '📅 Ajouter ou corriger un autre jour ';
+  manualToggleBtn.firstChild.textContent = visible ? t('toggle_manual_hide') : t('toggle_manual_show');
 }
 
 // ---------- SAISIE (manual form) ----------
@@ -628,7 +949,7 @@ function updateTypeFieldsVisibility() {
 function updateDayBadge() {
   const dow = dateToDow(f.date.value);
   const off = settings.offDays.includes(dow);
-  f.daybadge.textContent = WEEKDAYS_FR[dow] + (off ? ' · jour non travaillé' : '');
+  f.daybadge.textContent = weekdaysFull()[dow] + (off ? ' · ' + (lang === 'fr' ? 'jour non travaillé' : 'non-working day') : '');
   f.daybadge.classList.toggle('off', off);
 }
 
@@ -641,17 +962,17 @@ function updatePreview() {
   };
   const c = computeEntry(tmp);
   if (f.type.value !== 'normal') {
-    f.preview.innerHTML = `Type : <b>${TYPE_INFO[f.type.value].icon} ${TYPE_INFO[f.type.value].label}</b> — heures requises : <b>${fmtHM(c.requiredMin)}</b>, net du jour : <b class="${c.netMin >= 0 ? 'pos' : 'neg'}">${fmtHM(c.netMin, true)}</b>`;
+    f.preview.innerHTML = `${t('lbl_type_cap')} : <b>${typeIcon(f.type.value)} ${typeLabel(f.type.value)}</b> — ${t('lbl_required_hours_inline')} : <b>${fmtHM(c.requiredMin)}</b>, ${t('lbl_net_day_inline')} : <b class="${c.netMin >= 0 ? 'pos' : 'neg'}">${fmtHM(c.netMin, true)}</b>`;
     return;
   }
   if (!c.hasFullEntry) {
-    f.preview.innerHTML = `Heures requises : <b>${fmtHM(c.requiredMin)}</b> — renseignez l'entrée et la sortie pour voir le calcul complet.`;
+    f.preview.innerHTML = `${t('lbl_required_hours_cap')} : <b>${fmtHM(c.requiredMin)}</b> — ${t('msg_fill_checkin_checkout')}`;
     return;
   }
   f.preview.innerHTML =
-    `Travaillé : <b>${fmtHM(c.workedMin)}</b> &nbsp;·&nbsp; Requis : <b>${fmtHM(c.requiredMin)}</b><br>` +
-    `Écart : <b class="${c.diffMin >= 0 ? 'pos' : 'neg'}">${fmtHM(c.diffMin, true)}</b> &nbsp;·&nbsp; Supplémentaire : <b>${fmtHM(c.overtimeMin)}</b><br>` +
-    `Permission : <b>${fmtHM(c.permMin)}</b> &nbsp;·&nbsp; Net du jour : <b class="${c.netMin >= 0 ? 'pos' : 'neg'}">${fmtHM(c.netMin, true)}</b>`;
+    `${t('sg_worked')} : <b>${fmtHM(c.workedMin)}</b> &nbsp;·&nbsp; ${t('sg_required')} : <b>${fmtHM(c.requiredMin)}</b><br>` +
+    `${t('sg_diff')} : <b class="${c.diffMin >= 0 ? 'pos' : 'neg'}">${fmtHM(c.diffMin, true)}</b> &nbsp;·&nbsp; ${t('sg_overtime')} : <b>${fmtHM(c.overtimeMin)}</b><br>` +
+    `${t('lbl_permission_cap')} : <b>${fmtHM(c.permMin)}</b> &nbsp;·&nbsp; ${t('lbl_net_day_cap')} : <b class="${c.netMin >= 0 ? 'pos' : 'neg'}">${fmtHM(c.netMin, true)}</b>`;
 }
 updatePreview();
 
@@ -667,20 +988,20 @@ document.getElementById('entryForm').addEventListener('submit', (ev) => {
     permission: parseFloat(f.permission.value) || 0,
     notes: f.notes.value.trim(),
   };
-  if (!entry.date) { toast('Choisissez une date'); return; }
+  if (!entry.date) { toast(t('toast_choose_date')); return; }
 
   if (editingId) {
     const idx = entries.findIndex(e => e.id === editingId);
     if (idx >= 0) entries[idx] = entry;
-    toast('Journée modifiée');
+    toast(t('toast_day_updated'));
   } else {
     const existing = entries.findIndex(e => e.date === entry.date);
     if (existing >= 0) {
       entries[existing] = entry;
-      toast('Journée mise à jour (date existante)');
+      toast(t('toast_day_updated_existing'));
     } else {
       entries.push(entry);
-      toast('Journée enregistrée');
+      toast(t('toast_day_saved'));
     }
   }
   saveEntries(entries);
@@ -693,8 +1014,8 @@ f.cancel.addEventListener('click', resetForm);
 
 function resetForm() {
   editingId = null;
-  document.getElementById('formTitle').textContent = 'Nouvelle journée';
-  f.submit.textContent = 'Enregistrer';
+  document.getElementById('formTitle').textContent = t('form_title_new');
+  f.submit.textContent = t('btn_save');
   f.cancel.style.display = 'none';
   f.date.value = todayStr();
   f.type.value = 'normal';
@@ -712,8 +1033,8 @@ function editEntry(id) {
   const e = entries.find(x => x.id === id);
   if (!e) return;
   editingId = id;
-  document.getElementById('formTitle').textContent = 'Modifier la journée';
-  f.submit.textContent = 'Mettre à jour';
+  document.getElementById('formTitle').textContent = t('form_title_edit');
+  f.submit.textContent = t('btn_update');
   f.cancel.style.display = 'block';
   f.date.value = e.date;
   f.type.value = e.type || 'normal';
@@ -731,14 +1052,14 @@ function editEntry(id) {
 }
 
 function deleteEntry(id) {
-  if (!confirm('Supprimer cette journée ?')) return;
+  if (!confirm(t('confirm_delete_day'))) return;
   entries = entries.filter(e => e.id !== id);
   saveEntries(entries);
   renderHistory();
   renderDashboard();
   if (entryForDate(todayStr()) === undefined) renderToday();
   updateTopBadge();
-  toast('Journée supprimée');
+  toast(t('toast_day_deleted'));
 }
 
 // ---------- top badge ----------
@@ -749,7 +1070,7 @@ function updateTopBadge() {
   const last = list[list.length - 1];
   const val = last ? map[last.id] : 0;
   const el = document.getElementById('topCumul');
-  el.textContent = 'Cumul : ' + fmtHM(val, true);
+  el.textContent = t('top_cumul_prefix') + fmtHM(val, true);
   el.style.color = val < 0 ? '#ff9aa4' : '#cdd8ff';
 }
 
@@ -775,9 +1096,9 @@ function renderHistory() {
     diff += c.diffMin;
   }
   document.getElementById('histSummary').innerHTML = `
-    <div class="chipStat"><div class="csl">Travaillé</div><div class="csv">${fmtHM(worked)}</div></div>
-    <div class="chipStat"><div class="csl">Requis</div><div class="csv">${fmtHM(required)}</div></div>
-    <div class="chipStat"><div class="csl">Écart</div><div class="csv ${diff >= 0 ? 'pos' : 'neg'}">${fmtHM(diff, true)}</div></div>`;
+    <div class="chipStat"><div class="csl">${t('sg_worked')}</div><div class="csv">${fmtHM(worked)}</div></div>
+    <div class="chipStat"><div class="csl">${t('sg_required')}</div><div class="csv">${fmtHM(required)}</div></div>
+    <div class="chipStat"><div class="csl">${t('sg_diff')}</div><div class="csv ${diff >= 0 ? 'pos' : 'neg'}">${fmtHM(diff, true)}</div></div>`;
 
   const list = document.getElementById('hist-list');
   list.innerHTML = '';
@@ -795,23 +1116,23 @@ function renderHistory() {
 
     let title, sub;
     if (type !== 'normal') {
-      title = `${TYPE_INFO[type].icon} ${TYPE_INFO[type].label}`;
+      title = `${typeIcon(type)} ${typeLabel(type)}`;
       sub = e.notes || '';
     } else {
-      title = c.hasFullEntry ? `${e.checkIn} → ${e.checkOut}` : (e.checkIn ? `${e.checkIn} → en cours` : 'Non pointé');
-      sub = [c.hasFullEntry ? `Travaillé ${fmtHM(c.workedMin)}` : '', e.notes].filter(Boolean).join(' · ');
+      title = c.hasFullEntry ? `${e.checkIn} → ${e.checkOut}` : (e.checkIn ? `${e.checkIn} → ${t('day_inprogress')}` : t('day_notpunched'));
+      sub = [c.hasFullEntry ? `${t('sg_worked')} ${fmtHM(c.workedMin)}` : '', e.notes].filter(Boolean).join(' · ');
     }
 
     const row = document.createElement('div');
     row.className = 'dayRow status-' + statusClass;
     row.innerHTML = `
-      <div class="dateBlock"><div class="dnum">${d}</div><div class="ddow">${WEEKDAYS_SHORT[dow]}</div></div>
+      <div class="dateBlock"><div class="dnum">${d}</div><div class="ddow">${weekdaysShort()[dow]}</div></div>
       <div class="dayInfo"><div class="dTitle">${escapeHtml(title)}</div><div class="dSub">${escapeHtml(sub)}</div></div>
       <div class="dayRight">
         <div class="dPill ${c.netMin >= 0 ? 'pillPos' : 'pillNeg'}">${fmtHM(c.netMin, true)}</div>
-        <div class="dCumul">Cumul ${fmtHM(cumulMap[e.id], true)}</div>
+        <div class="dCumul">${t('cumul_label')} ${fmtHM(cumulMap[e.id], true)}</div>
       </div>
-      <button class="dayDelete" title="Supprimer">✕</button>`;
+      <button class="dayDelete" title="${t('delete_title')}">✕</button>`;
     row.addEventListener('click', (ev) => {
       if (ev.target.closest('.dayDelete')) return;
       editEntry(e.id);
@@ -910,9 +1231,7 @@ function renderDashboard() {
 
 function renderCalendar(dayInfos, startDate) {
   const weekdaysEl = document.getElementById('calWeekdays');
-  if (!weekdaysEl.childElementCount) {
-    weekdaysEl.innerHTML = ['L', 'M', 'M', 'J', 'V', 'S', 'D'].map(d => `<div>${d}</div>`).join('');
-  }
+  weekdaysEl.innerHTML = weekdaysShort().slice(1).concat(weekdaysShort()[0]).map(d => `<div>${d}</div>`).join('');
 
   const grid = document.getElementById('calGrid');
   grid.innerHTML = '';
@@ -930,7 +1249,7 @@ function renderCalendar(dayInfos, startDate) {
     const cell = document.createElement('div');
     let cls = d.status === 'miss' ? 'absence' : d.status;
     cell.className = 'calCell ' + cls + (d.status === 'miss' ? ' unconfirmed' : '') + (d.dateStr === today ? ' today' : '');
-    const icon = d.type ? TYPE_INFO[d.type].icon : '';
+    const icon = d.type ? typeIcon(d.type) : '';
     cell.innerHTML = `<div class="cNum">${d.day}</div>${icon ? `<div class="cIcon">${icon}</div>` : ''}`;
     cell.title = `${d.day} : ${fmtHM(d.net, true)}`;
     cell.addEventListener('click', () => openDateFromCalendar(d.dateStr));
@@ -942,8 +1261,8 @@ function openDateFromCalendar(dateStr) {
   const e = entryForDate(dateStr);
   if (e) { editEntry(e.id); return; }
   editingId = null;
-  document.getElementById('formTitle').textContent = 'Nouvelle journée';
-  f.submit.textContent = 'Enregistrer';
+  document.getElementById('formTitle').textContent = t('form_title_new');
+  f.submit.textContent = t('btn_save');
   f.cancel.style.display = 'none';
   f.date.value = dateStr;
   f.type.value = 'normal';
@@ -970,14 +1289,27 @@ function renderAlerts(dayInfos) {
   const leaves = dayInfos.filter(d => d.status === 'leave');
 
   const items = [];
-  if (missing.length) items.push({ text: `${missing.length} jour(s) sans pointage : ${missing.map(d => d.tag).join(', ')}`, cls: 'bad' });
-  if (partial.length) items.push({ text: `${partial.length} sortie manquante : jour(s) ${partial.map(d => d.tag).join(', ')}`, cls: 'bad' });
-  if (negatives.length) items.push({ text: `${negatives.length} jour(s) avec un manque d'heures`, cls: '' });
-  if (absences.length) items.push({ text: `${absences.length} jour(s) d'absence enregistré(s) : ${absences.map(d => d.tag).join(', ')}`, cls: 'info' });
-  if (leaves.length) items.push({ text: `${leaves.length} jour(s) de congé / férié / repos`, cls: 'info' });
+  if (missing.length) {
+    const tags = missing.map(d => d.tag).join(', ');
+    items.push({ text: lang === 'fr' ? `${missing.length} jour(s) sans pointage : ${tags}` : `${missing.length} day(s) without clock-in: ${tags}`, cls: 'bad' });
+  }
+  if (partial.length) {
+    const tags = partial.map(d => d.tag).join(', ');
+    items.push({ text: lang === 'fr' ? `${partial.length} sortie manquante : jour(s) ${tags}` : `${partial.length} missing check-out: day(s) ${tags}`, cls: 'bad' });
+  }
+  if (negatives.length) {
+    items.push({ text: lang === 'fr' ? `${negatives.length} jour(s) avec un manque d'heures` : `${negatives.length} day(s) with missing hours`, cls: '' });
+  }
+  if (absences.length) {
+    const tags = absences.map(d => d.tag).join(', ');
+    items.push({ text: lang === 'fr' ? `${absences.length} jour(s) d'absence enregistré(s) : ${tags}` : `${absences.length} recorded absence day(s): ${tags}`, cls: 'info' });
+  }
+  if (leaves.length) {
+    items.push({ text: lang === 'fr' ? `${leaves.length} jour(s) de congé / férié / repos` : `${leaves.length} leave / holiday / day-off day(s)`, cls: 'info' });
+  }
 
   if (!items.length) {
-    ul.innerHTML = '<li class="none">Aucune alerte ce mois-ci 👍</li>';
+    ul.innerHTML = `<li class="none">${lang === 'fr' ? 'Aucune alerte ce mois-ci 👍' : 'No alerts this month 👍'}</li>`;
     return;
   }
   for (const it of items) {
@@ -994,9 +1326,9 @@ function updateCycleEndPreview() {
   const sd = parseInt(document.getElementById('set-cycle-start').value, 10) || 1;
   const endEl = document.getElementById('set-cycle-end');
   if (sd === 1) {
-    endEl.value = 'dernier jour du mois';
+    endEl.value = t('cycle_end_last_day');
   } else {
-    endEl.value = `${sd - 1} du mois suivant`;
+    endEl.value = lang === 'fr' ? `${sd - 1} du mois suivant` : `Day ${sd - 1} of the following month`;
   }
 }
 
@@ -1004,18 +1336,15 @@ function renderSettings() {
   document.getElementById('set-required').value = settings.requiredHours;
 
   const cycleSel = document.getElementById('set-cycle-start');
-  if (!cycleSel.childElementCount) {
-    let html = '';
-    for (let d = 1; d <= 28; d++) html += `<option value="${d}">${d === 1 ? '1er (mois calendaire)' : d}</option>`;
-    cycleSel.innerHTML = html;
-    cycleSel.addEventListener('change', updateCycleEndPreview);
-  }
+  let html = '';
+  for (let d = 1; d <= 28; d++) html += `<option value="${d}">${d === 1 ? t('opt_cycle_calendar') : d}</option>`;
+  cycleSel.innerHTML = html;
   cycleSel.value = cycleStartDay();
   updateCycleEndPreview();
 
   const picker = document.getElementById('weekdayPicker');
   picker.innerHTML = '';
-  WEEKDAYS_SHORT.forEach((label, dow) => {
+  weekdaysShort().forEach((label, dow) => {
     const btn = document.createElement('div');
     btn.className = 'wd' + (settings.offDays.includes(dow) ? ' selected' : '');
     btn.textContent = label;
@@ -1023,7 +1352,11 @@ function renderSettings() {
     btn.addEventListener('click', () => btn.classList.toggle('selected'));
     picker.appendChild(btn);
   });
+
+  updateLangButtons();
 }
+
+document.getElementById('set-cycle-start').addEventListener('change', updateCycleEndPreview);
 
 document.getElementById('set-save').addEventListener('click', () => {
   const req = parseFloat(document.getElementById('set-required').value) || 0;
@@ -1035,11 +1368,44 @@ document.getElementById('set-save').addEventListener('click', () => {
   // recale les curseurs de période sur la période courante (le découpage a pu changer)
   histCursor = currentPeriodCursor();
   dashCursor = currentPeriodCursor();
-  toast('Réglages enregistrés');
+  toast(t('toast_settings_saved'));
   renderToday();
   renderHistory();
   renderDashboard();
   updateTopBadge();
+});
+
+// ---------- langue ----------
+
+const langButtons = document.querySelectorAll('.langBtn');
+
+function updateLangButtons() {
+  langButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.lang === lang));
+}
+updateLangButtons();
+
+function setLanguage(newLang) {
+  if (newLang !== 'fr' && newLang !== 'en') return;
+  if (newLang === lang) return;
+  lang = newLang;
+  localStorage.setItem(STORAGE_LANG, lang);
+  applyStaticTranslations();
+  updateLangButtons();
+  document.getElementById('formTitle').textContent = editingId ? t('form_title_edit') : t('form_title_new');
+  f.submit.textContent = editingId ? t('btn_update') : t('btn_save');
+  setManualFormVisible(manualCard.style.display !== 'none');
+  updateDayBadge();
+  updateTypeFieldsVisibility();
+  updatePreview();
+  renderToday();
+  renderHistory();
+  renderDashboard();
+  renderSettings();
+  updateTopBadge();
+}
+
+langButtons.forEach(btn => {
+  btn.addEventListener('click', () => setLanguage(btn.dataset.lang));
 });
 
 // ---------- export / import / reset ----------
@@ -1059,7 +1425,7 @@ function download(filename, content, type) {
 document.getElementById('btn-export').addEventListener('click', () => {
   const data = { settings, entries };
   download(`suivi-heures-${todayStr()}.json`, JSON.stringify(data, null, 2), 'application/json');
-  toast('Export JSON téléchargé');
+  toast(t('toast_export_json'));
 });
 
 document.getElementById('btn-export-csv').addEventListener('click', () => {
@@ -1072,12 +1438,12 @@ document.getElementById('btn-export-csv').addEventListener('click', () => {
       c.hasFullEntry ? fmtHM(c.workedMin) : '',
       fmtHM(c.requiredMin), fmtHM(c.diffMin, true), fmtHM(c.overtimeMin),
       fmtHM(c.permMin), fmtHM(cumulMap[e.id], true), (e.notes || '').replace(/;/g, ','),
-      TYPE_INFO[e.type || 'normal'].label
+      typeLabel(e.type || 'normal')
     ]);
   }
   const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\n');
   download(`suivi-heures-${todayStr()}.csv`, '﻿' + csv, 'text/csv');
-  toast('Export CSV téléchargé');
+  toast(t('toast_export_csv'));
 });
 
 document.getElementById('btn-import').addEventListener('change', (ev) => {
@@ -1088,35 +1454,69 @@ document.getElementById('btn-import').addEventListener('change', (ev) => {
     try {
       const data = JSON.parse(reader.result);
       if (!Array.isArray(data.entries)) throw new Error('format invalide');
-      if (!confirm('Importer remplacera toutes les données actuelles. Continuer ?')) return;
+      if (!confirm(t('confirm_import'))) return;
       entries = normalizeEntries(data.entries);
       settings = Object.assign(defaultSettings(), data.settings || {});
       saveEntries(entries);
       saveSettings(settings);
       histCursor = currentPeriodCursor();
       dashCursor = currentPeriodCursor();
-      toast('Importation réussie');
+      toast(t('toast_import_success'));
       renderSettings();
       renderToday();
       updateTopBadge();
     } catch (e) {
-      alert('Fichier invalide : ' + e.message);
+      alert(t('alert_invalid_file') + e.message);
     }
   };
   reader.readAsText(file);
   ev.target.value = '';
 });
 
+// réinitialisation des données : confirmée par re-saisie du mot de passe (pas de simple confirm())
+const resetConfirmModal = document.getElementById('resetConfirmModal');
+const resetConfirmForm = document.getElementById('resetConfirmForm');
+const resetConfirmPassword = document.getElementById('resetConfirmPassword');
+const resetConfirmError = document.getElementById('resetConfirmError');
+const resetConfirmSubmit = document.getElementById('resetConfirmSubmit');
+const resetConfirmCancel = document.getElementById('resetConfirmCancel');
+
 document.getElementById('btn-reset').addEventListener('click', () => {
-  if (!confirm('Supprimer définitivement toutes les journées enregistrées ?')) return;
-  if (!confirm('Cette action est irréversible. Confirmer la suppression ?')) return;
-  entries = [];
-  saveEntries(entries);
-  toast('Données réinitialisées');
-  renderHistory();
-  renderDashboard();
-  renderToday();
-  updateTopBadge();
+  resetConfirmPassword.value = '';
+  resetConfirmError.style.display = 'none';
+  resetConfirmModal.classList.remove('hidden');
+  setTimeout(() => resetConfirmPassword.focus(), 0);
+});
+
+resetConfirmCancel.addEventListener('click', () => {
+  resetConfirmModal.classList.add('hidden');
+});
+
+resetConfirmForm.addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  resetConfirmError.style.display = 'none';
+  resetConfirmSubmit.disabled = true;
+  try {
+    const { error } = await supabaseClient.auth.signInWithPassword({
+      email: currentUser.email,
+      password: resetConfirmPassword.value,
+    });
+    if (error) throw error;
+
+    resetConfirmModal.classList.add('hidden');
+    entries = [];
+    saveEntries(entries);
+    toast(t('toast_reset_done'));
+    renderHistory();
+    renderDashboard();
+    renderToday();
+    updateTopBadge();
+  } catch (err) {
+    resetConfirmError.textContent = t('wrong_password');
+    resetConfirmError.style.display = 'block';
+  } finally {
+    resetConfirmSubmit.disabled = false;
+  }
 });
 
 // ---------- init ----------
@@ -1137,6 +1537,7 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
 // personne puis on lui demande de choisir son mot de passe (voir authRedirectType plus haut).
 
 const appRoot = document.getElementById('appRoot');
+const loadingScreen = document.getElementById('loadingScreen');
 const authScreen = document.getElementById('authScreen');
 const authSigninBlock = document.getElementById('authSigninBlock');
 const authSetPasswordBlock = document.getElementById('authSetPasswordBlock');
@@ -1163,7 +1564,7 @@ authForm.addEventListener('submit', async (ev) => {
     const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) throw error;
   } catch (err) {
-    authError.textContent = err.message || 'Une erreur est survenue.';
+    authError.textContent = err.message || t('auth_generic_error');
     authError.style.display = 'block';
   } finally {
     authSubmit.disabled = false;
@@ -1174,9 +1575,9 @@ setPasswordForm.addEventListener('submit', async (ev) => {
   ev.preventDefault();
   setpwError.style.display = 'none';
   const pw = setpwPasswordInput.value;
-  const confirm = setpwConfirmInput.value;
-  if (pw !== confirm) {
-    setpwError.textContent = 'Les deux mots de passe ne correspondent pas.';
+  const confirmPw = setpwConfirmInput.value;
+  if (pw !== confirmPw) {
+    setpwError.textContent = t('setpw_mismatch');
     setpwError.style.display = 'block';
     return;
   }
@@ -1189,10 +1590,10 @@ setPasswordForm.addEventListener('submit', async (ev) => {
     history.replaceState(null, '', window.location.pathname + window.location.search);
     authSetPasswordBlock.classList.add('hidden');
     authSigninBlock.classList.remove('hidden');
-    toast('Mot de passe défini ✅');
+    toast(t('toast_password_set'));
     await enterApp();
   } catch (err) {
-    setpwError.textContent = err.message || 'Erreur lors de la mise à jour du mot de passe.';
+    setpwError.textContent = err.message || t('setpw_error');
     setpwError.style.display = 'block';
   } finally {
     setpwSubmit.disabled = false;
@@ -1216,7 +1617,7 @@ async function enterApp() {
     await syncFromCloud();
   } catch (err) {
     console.error('Chargement cloud échoué', err);
-    toast('⚠️ Impossible de charger vos données');
+    toast(t('toast_load_error'));
   }
   authScreen.classList.add('hidden');
   appRoot.classList.remove('hidden');
@@ -1247,17 +1648,25 @@ async function syncFromCloud() {
   histCursor = currentPeriodCursor();
   dashCursor = currentPeriodCursor();
   resetForm();
-  renderToday();
   renderHistory();
   renderDashboard();
   renderSettings();
-  updateTopBadge();
+  switchView('saisie'); // toujours revenir sur Saisie à l'ouverture / reconnexion
 }
 
 async function handleAuthChange(session) {
+  loadingScreen.classList.add('hidden'); // Supabase a répondu : on sait désormais quel écran montrer
+
   if (session && session.user) {
+    // signInWithPassword() (ex: re-vérification avant reset) redéclenche cet événement même
+    // pour l'utilisateur déjà connecté : si l'app est déjà affichée pour ce même compte,
+    // c'est juste un rafraîchissement de session, inutile de tout recharger
+    const alreadyInAppForSameUser = currentUser && currentUser.id === session.user.id && !appRoot.classList.contains('hidden');
+
     currentUser = session.user;
     userEmailEl.textContent = currentUser.email || '';
+
+    if (alreadyInAppForSameUser) return;
 
     // arrivée via un lien d'invitation (ou de réinitialisation) : on bloque sur
     // l'écran "choisissez votre mot de passe" avant de laisser entrer dans l'app

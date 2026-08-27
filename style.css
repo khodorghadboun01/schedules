@@ -42,6 +42,17 @@
 }
 .authCard { width: 100%; max-width: 360px; text-align: center; }
 .authLogo { font-size: 40px; margin-bottom: 6px; }
+
+.spinner {
+  width: 34px;
+  height: 34px;
+  margin: 14px auto 0;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 .authCard label { text-align: left; }
 .authError {
   background: var(--bad-soft);
@@ -76,6 +87,44 @@
   white-space: nowrap;
 }
 .userBar .btn { flex: none; }
+
+.langSwitch {
+  display: flex;
+  gap: 10px;
+}
+.langBtn {
+  flex: 1;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  transition: transform .08s ease, filter .15s ease;
+}
+.langBtn:active { transform: scale(0.97); }
+.langBtn.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+  color: white;
+  box-shadow: 0 8px 18px -8px rgba(91,140,255,0.6);
+}
+
+/* ---------- modale générique (confirmation par mot de passe, etc.) ---------- */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(6, 9, 18, 0.72);
+}
 
 html, body {
   margin: 0;

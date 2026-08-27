@@ -12,41 +12,47 @@
 </head>
 <body>
 
+<!-- ECRAN DE CHARGEMENT (le temps de savoir si une session est déjà valide) -->
+<div class="authScreen" id="loadingScreen">
+  <div class="authLogo">🕒</div>
+  <div class="spinner"></div>
+</div>
+
 <!-- ECRAN DE CONNEXION -->
-<div class="authScreen" id="authScreen">
+<div class="authScreen hidden" id="authScreen">
   <div class="card authCard">
     <div class="authLogo">🕒</div>
 
     <div id="authSigninBlock">
-      <h2>Connexion</h2>
-      <p class="muted">Accès sur invitation uniquement.</p>
+      <h2 data-i18n="auth_title">Connexion</h2>
+      <p class="muted" data-i18n="auth_subtitle">Accès sur invitation uniquement.</p>
       <form id="authForm">
-        <label>Email
+        <label data-i18n="auth_email">Email
           <input type="email" id="auth-email" required autocomplete="email">
         </label>
-        <label>Mot de passe
+        <label data-i18n="auth_password">Mot de passe
           <input type="password" id="auth-password" required autocomplete="current-password" minlength="6">
         </label>
         <div class="authError" id="authError" style="display:none"></div>
         <div class="formActions">
-          <button type="submit" class="btn primary" id="authSubmit">Se connecter</button>
+          <button type="submit" class="btn primary" id="authSubmit" data-i18n="auth_submit">Se connecter</button>
         </div>
       </form>
     </div>
 
     <div id="authSetPasswordBlock" class="hidden">
-      <h2>Bienvenue 👋</h2>
-      <p class="muted">Choisissez votre mot de passe pour activer votre compte.</p>
+      <h2 data-i18n="setpw_title">Bienvenue 👋</h2>
+      <p class="muted" data-i18n="setpw_subtitle">Choisissez votre mot de passe pour activer votre compte.</p>
       <form id="setPasswordForm">
-        <label>Nouveau mot de passe
+        <label data-i18n="setpw_new">Nouveau mot de passe
           <input type="password" id="setpw-password" required autocomplete="new-password" minlength="6">
         </label>
-        <label>Confirmez le mot de passe
+        <label data-i18n="setpw_confirm">Confirmez le mot de passe
           <input type="password" id="setpw-confirm" required autocomplete="new-password" minlength="6">
         </label>
         <div class="authError" id="setpwError" style="display:none"></div>
         <div class="formActions">
-          <button type="submit" class="btn primary" id="setpwSubmit">Valider le mot de passe</button>
+          <button type="submit" class="btn primary" id="setpwSubmit" data-i18n="setpw_submit">Valider le mot de passe</button>
         </div>
       </form>
     </div>
@@ -58,7 +64,7 @@
 <header class="topbar">
   <div class="topbar-title">
     <span class="logo">🕒</span>
-    <span>Suivi Heures</span>
+    <span data-i18n="app_title">Suivi Heures</span>
   </div>
   <div class="topbar-cumul" id="topCumul">--</div>
 </header>
@@ -66,61 +72,61 @@
 <main id="app">
 
   <!-- SAISIE -->
-  <section class="view" id="view-saisie">
+  <section class="view active" id="view-saisie">
 
     <div class="card todayCard" id="todayCard"><!-- rendu par renderToday() --></div>
 
-    <button type="button" class="linkToggle" id="toggleManualForm">📅 Ajouter ou corriger un autre jour <span id="toggleManualArrow">▾</span></button>
+    <button type="button" class="linkToggle" id="toggleManualForm" data-i18n="toggle_manual_show">📅 Ajouter ou corriger un autre jour <span id="toggleManualArrow">▾</span></button>
 
     <div class="card" id="manualFormCard" style="display:none">
-      <h2 id="formTitle">Nouvelle journée</h2>
+      <h2 id="formTitle" data-i18n="form_title_new">Nouvelle journée</h2>
       <form id="entryForm">
-        <label>Date
+        <label data-i18n="label_date">Date
           <input type="date" id="f-date" required>
         </label>
 
         <div class="daybadge" id="f-daybadge"></div>
 
-        <label>Type de journée
+        <label data-i18n="label_type">Type de journée
           <select id="f-type">
-            <option value="normal">Normal (avec entrée / sortie)</option>
-            <option value="conge">🌴 Congé</option>
-            <option value="ferie">🎌 Jour férié</option>
-            <option value="repos">🛌 Repos exceptionnel</option>
-            <option value="absence">🚫 Absence</option>
+            <option value="normal" data-i18n="opt_normal">Normal (avec entrée / sortie)</option>
+            <option value="conge" data-i18n="opt_conge">🌴 Congé</option>
+            <option value="ferie" data-i18n="opt_ferie">🎌 Jour férié</option>
+            <option value="repos" data-i18n="opt_repos">🛌 Repos exceptionnel</option>
+            <option value="absence" data-i18n="opt_absence">🚫 Absence</option>
           </select>
         </label>
 
         <div class="row2" id="f-timeRow">
-          <label>Heure d'entrée (Check In)
+          <label data-i18n="label_checkin">Heure d'entrée (Check In)
             <div class="timePicker">
               <select id="f-checkin-h" class="timeSel"></select><span class="timeColon">:</span><select id="f-checkin-m" class="timeSel"></select>
             </div>
           </label>
-          <label>Heure de sortie (Check Out)
+          <label data-i18n="label_checkout">Heure de sortie (Check Out)
             <div class="timePicker">
               <select id="f-checkout-h" class="timeSel"></select><span class="timeColon">:</span><select id="f-checkout-m" class="timeSel"></select>
             </div>
           </label>
         </div>
 
-        <label>Heures requises (h)
+        <label data-i18n="label_required">Heures requises (h)
           <input type="number" id="f-required" step="0.01" min="0">
         </label>
 
-        <label>Permissions de sortie (minutes)
+        <label data-i18n="label_permission">Permissions de sortie (minutes)
           <input type="number" id="f-permission" step="1" min="0" value="0">
         </label>
 
-        <label>Notes
-          <textarea id="f-notes" rows="2" placeholder="Retard justifié, mission, etc."></textarea>
+        <label data-i18n="label_notes">Notes
+          <textarea id="f-notes" rows="2" placeholder="Retard justifié, mission, etc." data-i18n-placeholder="notes_placeholder"></textarea>
         </label>
 
         <div class="preview" id="f-preview"></div>
 
         <div class="formActions">
-          <button type="submit" class="btn primary" id="f-submit">Enregistrer</button>
-          <button type="button" class="btn ghost" id="f-cancel" style="display:none">Annuler la modification</button>
+          <button type="submit" class="btn primary" id="f-submit" data-i18n="btn_save">Enregistrer</button>
+          <button type="button" class="btn ghost" id="f-cancel" style="display:none" data-i18n="btn_cancel_edit">Annuler la modification</button>
         </div>
       </form>
     </div>
@@ -139,7 +145,7 @@
 
     <div class="card listCard">
       <div class="dayList" id="hist-list"></div>
-      <div class="emptyState" id="hist-empty" style="display:none">Aucune entrée pour ce mois. Ajoutez-en une dans l'onglet Saisie, ou touchez un jour dans le Dashboard.</div>
+      <div class="emptyState" id="hist-empty" style="display:none" data-i18n="hist_empty">Aucune entrée pour ce mois. Ajoutez-en une dans l'onglet Saisie, ou touchez un jour dans le Dashboard.</div>
     </div>
   </section>
 
@@ -153,60 +159,60 @@
       </div>
 
       <div class="progressWrap">
-        <div class="progressLabel"><span>Progression du mois</span><span id="progressPct">--</span></div>
+        <div class="progressLabel"><span data-i18n="dash_progress">Progression du mois</span><span id="progressPct">--</span></div>
         <div class="progressBar"><div class="progressFill" id="progressFill"></div></div>
       </div>
 
       <div class="statsGrid">
         <div class="stat">
           <div class="stat-icon">⏱️</div>
-          <div class="stat-label">Heures travaillées</div>
+          <div class="stat-label" data-i18n="stat_worked">Heures travaillées</div>
           <div class="stat-value" id="s-worked">--</div>
         </div>
         <div class="stat">
           <div class="stat-icon">🎯</div>
-          <div class="stat-label">Heures requises</div>
+          <div class="stat-label" data-i18n="stat_required">Heures requises</div>
           <div class="stat-value" id="s-required">--</div>
         </div>
         <div class="stat">
           <div class="stat-icon">🚀</div>
-          <div class="stat-label">Heures supplémentaires</div>
+          <div class="stat-label" data-i18n="stat_overtime">Heures supplémentaires</div>
           <div class="stat-value good" id="s-overtime">--</div>
         </div>
         <div class="stat">
           <div class="stat-icon">⚖️</div>
-          <div class="stat-label">Écart du mois</div>
+          <div class="stat-label" data-i18n="stat_diff">Écart du mois</div>
           <div class="stat-value" id="s-diff">--</div>
         </div>
         <div class="stat">
           <div class="stat-icon">🪪</div>
-          <div class="stat-label">Permissions cumulées</div>
+          <div class="stat-label" data-i18n="stat_perm">Permissions cumulées</div>
           <div class="stat-value" id="s-perm">--</div>
         </div>
         <div class="stat">
           <div class="stat-icon">🏦</div>
-          <div class="stat-label">Cumul fin de mois</div>
+          <div class="stat-label" data-i18n="stat_cumul">Cumul fin de mois</div>
           <div class="stat-value" id="s-cumul">--</div>
         </div>
       </div>
     </div>
 
     <div class="card">
-      <div class="subhead">Calendrier du mois</div>
+      <div class="subhead" data-i18n="cal_title">Calendrier du mois</div>
       <div class="calWeekdays" id="calWeekdays"></div>
       <div class="calGrid" id="calGrid"></div>
       <div class="daysRow">
-        <div><span class="dot ok"></span> jour complet</div>
-        <div><span class="dot warn"></span> manque d'heures</div>
-        <div><span class="dot off"></span> repos</div>
-        <div><span class="dot leave"></span> congé / férié</div>
-        <div><span class="dot miss"></span> absence / non pointé</div>
+        <div><span class="dot ok"></span> <span data-i18n="legend_ok">jour complet</span></div>
+        <div><span class="dot warn"></span> <span data-i18n="legend_warn">manque d'heures</span></div>
+        <div><span class="dot off"></span> <span data-i18n="legend_off">repos</span></div>
+        <div><span class="dot leave"></span> <span data-i18n="legend_leave">congé / férié</span></div>
+        <div><span class="dot miss"></span> <span data-i18n="legend_miss">absence / non pointé</span></div>
       </div>
-      <p class="muted" style="margin:10px 0 0">Touchez un jour pour l'ouvrir ou en ajouter un.</p>
+      <p class="muted" style="margin:10px 0 0" data-i18n="cal_hint">Touchez un jour pour l'ouvrir ou en ajouter un.</p>
     </div>
 
     <div class="card">
-      <div class="subhead">Alertes</div>
+      <div class="subhead" data-i18n="alerts_title">Alertes</div>
       <ul class="alertList" id="alertList"></ul>
     </div>
   </section>
@@ -214,52 +220,60 @@
   <!-- REGLAGES -->
   <section class="view" id="view-reglages">
     <div class="card">
-      <h2>Compte</h2>
+      <h2 data-i18n="account_title">Compte</h2>
       <div class="userBar">
         <span class="userEmail" id="userEmail">--</span>
-        <button type="button" class="btn ghost" id="btn-logout">Se déconnecter</button>
+        <button type="button" class="btn ghost" id="btn-logout" data-i18n="logout_btn">Se déconnecter</button>
       </div>
     </div>
 
     <div class="card">
-      <h2>Réglages</h2>
+      <h2 data-i18n="lang_title">Langue</h2>
+      <div class="langSwitch">
+        <button type="button" class="langBtn" id="lang-fr" data-lang="fr">Français</button>
+        <button type="button" class="langBtn" id="lang-en" data-lang="en">English</button>
+      </div>
+    </div>
 
-      <label>Heures requises par défaut (jour travaillé)
+    <div class="card">
+      <h2 data-i18n="settings_title">Réglages</h2>
+
+      <label data-i18n="label_default_required">Heures requises par défaut (jour travaillé)
         <input type="number" id="set-required" step="0.01" min="0">
       </label>
 
-      <div class="subhead">Cycle mensuel (période de paie)</div>
-      <p class="muted">Dans l'entreprise, le mois ne va pas du 1er au 30. Indiquez le jour où commence le cycle : la période ira de ce jour au même jour (–1) du mois suivant. Ex. : 26 → chaque mois va du 26 au 25 du mois d'après. Mettez 1 pour un mois calendaire classique.</p>
+      <div class="subhead" data-i18n="cycle_title">Cycle mensuel (période de paie)</div>
+      <p class="muted" data-i18n="cycle_desc">Dans l'entreprise, le mois ne va pas du 1er au 30. Indiquez le jour où commence le cycle : la période ira de ce jour au même jour (–1) du mois suivant. Ex. : 26 → chaque mois va du 26 au 25 du mois d'après. Mettez 1 pour un mois calendaire classique.</p>
       <div class="row2">
-        <label>Le cycle commence le
+        <label data-i18n="label_cycle_start">Le cycle commence le
           <select id="set-cycle-start"></select>
         </label>
-        <label>Le cycle se termine le
+        <label data-i18n="label_cycle_end">Le cycle se termine le
           <input type="text" id="set-cycle-end" readonly>
         </label>
       </div>
 
-      <div class="subhead">Jours non travaillés par défaut</div>
+      <div class="subhead" data-i18n="offdays_title">Jours non travaillés par défaut</div>
       <div class="weekdayPicker" id="weekdayPicker"></div>
 
       <div class="formActions">
-        <button class="btn primary" id="set-save">Enregistrer les réglages</button>
+        <button class="btn primary" id="set-save" data-i18n="btn_save_settings">Enregistrer les réglages</button>
       </div>
 
       <hr>
 
-      <div class="subhead">Sauvegarde des données</div>
-      <p class="muted">Vos données sont synchronisées avec votre compte en ligne. Exportez régulièrement une sauvegarde par précaution.</p>
+      <div class="subhead" data-i18n="backup_title">Sauvegarde des données</div>
+      <p class="muted" data-i18n="backup_desc">Vos données sont synchronisées avec votre compte en ligne. Exportez régulièrement une sauvegarde par précaution.</p>
       <div class="formActions">
-        <button class="btn" id="btn-export">Exporter (JSON)</button>
-        <button class="btn" id="btn-export-csv">Exporter (CSV)</button>
-        <label class="btn fileBtn">Importer (JSON)
+        <button class="btn" id="btn-export" data-i18n="btn_export_json">Exporter (JSON)</button>
+        <button class="btn" id="btn-export-csv" data-i18n="btn_export_csv">Exporter (CSV)</button>
+        <label class="btn fileBtn" data-i18n="btn_import_json">Importer (JSON)
           <input type="file" id="btn-import" accept="application/json" style="display:none">
         </label>
       </div>
 
       <div class="formActions">
-        <button class="btn danger" id="btn-reset">Réinitialiser toutes les données</button>
+        <button class="btn danger" id="btn-reset" data-i18n="btn_reset_all">Réinitialiser toutes les données</button>
       </div>
     </div>
   </section>
@@ -268,20 +282,38 @@
 
 <nav class="tabbar">
   <button class="tab active" data-view="saisie">
-    <span>✏️</span><small>Saisie</small>
+    <span>✏️</span><small data-i18n="nav_saisie">Saisie</small>
   </button>
   <button class="tab" data-view="historique">
-    <span>📋</span><small>Historique</small>
+    <span>📋</span><small data-i18n="nav_historique">Historique</small>
   </button>
   <button class="tab" data-view="dashboard">
-    <span>📊</span><small>Dashboard</small>
+    <span>📊</span><small data-i18n="nav_dashboard">Dashboard</small>
   </button>
   <button class="tab" data-view="reglages">
-    <span>⚙️</span><small>Réglages</small>
+    <span>⚙️</span><small data-i18n="nav_reglages">Réglages</small>
   </button>
 </nav>
 
 <div class="toast" id="toast"></div>
+
+<!-- CONFIRMATION PAR MOT DE PASSE (réinitialisation des données) -->
+<div class="modalOverlay hidden" id="resetConfirmModal">
+  <div class="card authCard">
+    <h2 data-i18n="reset_confirm_title">Confirmer la réinitialisation</h2>
+    <p class="muted" data-i18n="reset_confirm_desc">Cette action supprime définitivement toutes vos journées enregistrées. Entrez votre mot de passe pour confirmer.</p>
+    <form id="resetConfirmForm">
+      <label data-i18n="auth_password">Mot de passe
+        <input type="password" id="resetConfirmPassword" required autocomplete="current-password">
+      </label>
+      <div class="authError" id="resetConfirmError" style="display:none"></div>
+      <div class="formActions">
+        <button type="submit" class="btn danger" id="resetConfirmSubmit" data-i18n="btn_reset_all">Réinitialiser toutes les données</button>
+        <button type="button" class="btn ghost" id="resetConfirmCancel" data-i18n="btn_cancel">Annuler</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 </div>
 

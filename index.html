@@ -256,6 +256,13 @@
       <div class="subhead" data-i18n="offdays_title">Jours non travaillés par défaut</div>
       <div class="weekdayPicker" id="weekdayPicker"></div>
 
+      <div class="subhead" data-i18n="clock_title">Horloge de l'appareil</div>
+      <p class="muted" data-i18n="clock_desc">Si l'horloge de cet appareil n'est pas exactement à l'heure, indiquez l'écart en minutes : positif si l'appareil retarde, négatif s'il avance. Le pointage Arrivée / Sortie sera enregistré à l'heure corrigée. Ajustez la valeur jusqu'à ce que « heure corrigée » corresponde à l'heure réelle. Ce réglage reste sur cet appareil et n'est pas synchronisé.</p>
+      <label data-i18n="clock_offset_label">Écart en minutes (+ retard / – avance)
+        <input type="number" id="set-clock-offset" step="1" min="-720" max="720" value="0">
+      </label>
+      <div class="preview" id="set-clock-preview"></div>
+
       <div class="formActions">
         <button class="btn primary" id="set-save" data-i18n="btn_save_settings">Enregistrer les réglages</button>
       </div>

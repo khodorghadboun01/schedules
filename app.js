@@ -2,6 +2,7 @@
 
 const STORAGE_ENTRIES = 'wh_entries_v1';
 const STORAGE_SETTINGS = 'wh_settings_v1';
+const STORAGE_CLOCK_OFFSET = 'wh_clock_offset_v1'; // décalage de l'horloge de l'appareil, en minutes (local, non synchronisé)
 
 const SUPABASE_URL = 'https://hqwqplhmntxyxttuqqhi.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhxd3FwbGhtbnR4eXh0dHVxcWhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4MjY0NDEsImV4cCI6MjEwMzQwMjQ0MX0.fR6vAb7kkgZKx64TidHgbjhOxdDRNRf5VpW5N7Lvjr0';
@@ -152,6 +153,11 @@ const I18N = {
     reset_confirm_title: 'Confirmer la réinitialisation',
     reset_confirm_desc: 'Cette action supprime définitivement toutes vos journées enregistrées. Entrez votre mot de passe pour confirmer.',
     wrong_password: 'Mot de passe incorrect.',
+    clock_title: "Horloge de l'appareil",
+    clock_desc: "Si l'horloge de cet appareil n'est pas exactement à l'heure, indiquez l'écart en minutes : positif si l'appareil retarde, négatif s'il avance. Le pointage Arrivée / Sortie sera enregistré à l'heure corrigée. Ajustez la valeur jusqu'à ce que « heure corrigée » corresponde à l'heure réelle. Ce réglage reste sur cet appareil et n'est pas synchronisé.",
+    clock_offset_label: "Écart en minutes (+ retard / – avance)",
+    clock_device_now: "Heure de l'appareil",
+    clock_corrected_now: 'Heure corrigée (utilisée au pointage)',
     lang_title: 'Langue',
     type_normal: 'Normal',
     type_conge: 'Congé',
@@ -291,6 +297,11 @@ const I18N = {
     reset_confirm_title: 'Confirm reset',
     reset_confirm_desc: 'This action permanently deletes all your recorded days. Enter your password to confirm.',
     wrong_password: 'Incorrect password.',
+    clock_title: 'Device clock',
+    clock_desc: "If this device's clock isn't exactly on time, enter the offset in minutes: positive if the device is slow, negative if it's fast. Check-in / check-out will be recorded at the corrected time. Adjust the value until “corrected time” matches the real time. This setting stays on this device and is not synced.",
+    clock_offset_label: 'Offset in minutes (+ slow / – fast)',
+    clock_device_now: 'Device time',
+    clock_corrected_now: 'Corrected time (used when clocking)',
     lang_title: 'Language',
     type_normal: 'Normal',
     type_conge: 'Leave',
@@ -479,13 +490,26 @@ function uid() {
   });
 }
 
+// décalage (en minutes) entre l'horloge de cet appareil et l'heure réelle
+// > 0 : l'appareil retarde ; < 0 : l'appareil avance. Stocké localement, jamais synchronisé.
+function clockOffsetMin() {
+  const v = parseInt(localStorage.getItem(STORAGE_CLOCK_OFFSET), 10);
+  if (!Number.isFinite(v)) return 0;
+  return Math.min(720, Math.max(-720, v));
+}
+
+// "maintenant" corrigé du décalage d'horloge de l'appareil
+function correctedNow() {
+  return new Date(Date.now() + clockOffsetMin() * 60000);
+}
+
 function todayStr() {
-  const d = new Date();
+  const d = correctedNow();
   return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 }
 
 function nowHM() {
-  const d = new Date();
+  const d = correctedNow();
   return pad(d.getHours()) + ':' + pad(d.getMinutes());
 }
 
@@ -1332,8 +1356,27 @@ function updateCycleEndPreview() {
   }
 }
 
+function updateClockPreview() {
+  const el = document.getElementById('set-clock-preview');
+  if (!el) return;
+  const raw = parseInt(document.getElementById('set-clock-offset').value, 10);
+  const off = Number.isFinite(raw) ? Math.min(720, Math.max(-720, raw)) : 0;
+  const dev = new Date();
+  const cor = new Date(dev.getTime() + off * 60000);
+  const hms = d => pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+  el.innerHTML = `${t('clock_device_now')} : <b>${hms(dev)}</b><br>${t('clock_corrected_now')} : <b>${hms(cor)}</b>`;
+}
+
+// horloge qui avance : garde l'aperçu à jour tant qu'on est dans les Réglages
+setInterval(() => {
+  const v = document.getElementById('view-reglages');
+  if (v && v.classList.contains('active')) updateClockPreview();
+}, 1000);
+
 function renderSettings() {
   document.getElementById('set-required').value = settings.requiredHours;
+  document.getElementById('set-clock-offset').value = clockOffsetMin();
+  updateClockPreview();
 
   const cycleSel = document.getElementById('set-cycle-start');
   let html = '';
@@ -1357,6 +1400,7 @@ function renderSettings() {
 }
 
 document.getElementById('set-cycle-start').addEventListener('change', updateCycleEndPreview);
+document.getElementById('set-clock-offset').addEventListener('input', updateClockPreview);
 
 document.getElementById('set-save').addEventListener('click', () => {
   const req = parseFloat(document.getElementById('set-required').value) || 0;
@@ -1365,6 +1409,9 @@ document.getElementById('set-save').addEventListener('click', () => {
   cs = Math.min(28, Math.max(1, cs));
   settings = { requiredHours: req, offDays, cycleStartDay: cs };
   saveSettings(settings);
+  // décalage d'horloge : local à l'appareil, jamais synchronisé ni exporté
+  const clkRaw = parseInt(document.getElementById('set-clock-offset').value, 10);
+  localStorage.setItem(STORAGE_CLOCK_OFFSET, String(Number.isFinite(clkRaw) ? Math.min(720, Math.max(-720, clkRaw)) : 0));
   // recale les curseurs de période sur la période courante (le découpage a pu changer)
   histCursor = currentPeriodCursor();
   dashCursor = currentPeriodCursor();

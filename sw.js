@@ -1,4 +1,4 @@
-const CACHE = 'suivi-heures-v4';
+const CACHE = 'suivi-heures-v5';
 const FILES = ['./', './index.html', './style.css', './app.js', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', (event) => {

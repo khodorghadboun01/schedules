@@ -57,6 +57,11 @@ const I18N = {
     label_checkout: 'Heure de sortie (Check Out)',
     label_required: 'Heures requises (h)',
     label_permission: 'Permissions de sortie (minutes)',
+    btn_take_hours: '🏃 Prendre des heures',
+    label_hours_off: 'Nombre d\'heures prises (h)',
+    label_hours_off_taken: 'Heures prises',
+    toast_hours_off_saved: 'Heures prises enregistrées : ',
+    toast_hours_off_removed: 'Heures prises retirées',
     label_notes: 'Notes',
     notes_placeholder: 'Retard justifié, mission, etc.',
     btn_save: 'Enregistrer',
@@ -201,6 +206,11 @@ const I18N = {
     label_checkout: 'Check-out time',
     label_required: 'Required hours (h)',
     label_permission: 'Exit permissions (minutes)',
+    btn_take_hours: '🏃 Take hours off',
+    label_hours_off: 'Number of hours taken (h)',
+    label_hours_off_taken: 'Hours taken',
+    toast_hours_off_saved: 'Hours taken recorded: ',
+    toast_hours_off_removed: 'Hours taken removed',
     label_notes: 'Notes',
     notes_placeholder: 'Justified delay, mission, etc.',
     btn_save: 'Save',
@@ -721,6 +731,7 @@ function switchView(name) {
 // ================= TODAY WIDGET (check-in / check-out en un tap) =================
 
 let todayEditingField = null; // 'checkIn' | 'checkOut' | null
+let todayEditingPermission = false;
 
 function renderToday() {
   const dateStr = todayStr();
@@ -775,7 +786,8 @@ function renderToday() {
 
   // check-in fait, pas encore de check-out
   if (entry.checkIn && !entry.checkOut) {
-    card.innerHTML = head + renderTimePill('checkIn', entry.checkIn, t('label_arrivee')) + `
+    card.innerHTML = head + renderTimePill('checkIn', entry.checkIn, t('label_arrivee')) +
+      renderPermissionBlock(entry) + `
       <button class="bigAction checkout" onclick="quickCheckOut()"><span class="ic">🔴</span> ${t('btn_checkout')}</button>
       <button class="smallLink danger" onclick="quickResetToday()">${t('btn_cancel_checkin')}</button>`;
     return;
@@ -786,16 +798,68 @@ function renderToday() {
   card.innerHTML = head +
     renderTimePill('checkIn', entry.checkIn, t('label_arrivee')) +
     renderTimePill('checkOut', entry.checkOut, t('label_sortie')) +
+    renderPermissionBlock(entry) +
     `<div class="summaryGrid">
       <div class="mini"><div class="ml">${t('sg_worked')}</div><div class="mv">${fmtHM(c.workedMin)}</div></div>
       <div class="mini"><div class="ml">${t('sg_required')}</div><div class="mv">${fmtHM(c.requiredMin)}</div></div>
       <div class="mini"><div class="ml">${t('sg_diff')}</div><div class="mv ${c.diffMin >= 0 ? 'pos' : 'neg'}">${fmtHM(c.diffMin, true)}</div></div>
       <div class="mini"><div class="ml">${t('sg_overtime')}</div><div class="mv">${fmtHM(c.overtimeMin)}</div></div>
+      <div class="mini"><div class="ml">${t('lbl_net_day_cap')}</div><div class="mv ${c.netMin >= 0 ? 'pos' : 'neg'}">${fmtHM(c.netMin, true)}</div></div>
     </div>
     <div class="rowActions">
       <button class="smallLink" onclick="openManualEdit('${entry.id}')">${t('btn_edit_perm_notes')}</button>
       <button class="smallLink danger" onclick="quickResetToday()">${t('btn_reset_day')}</button>
     </div>`;
+}
+
+// pastille "heures prises" (permission de sortie) sur la carte du jour : affichage + saisie rapide, sans impact sur le cumul
+function renderPermissionBlock(entry) {
+  const permMin = entry ? Math.round(entry.permission || 0) : 0;
+
+  if (todayEditingPermission) {
+    const hoursVal = permMin ? (permMin / 60) : '';
+    return `<div class="timePill editing">
+      <div class="tp-label">${t('label_hours_off')}</div>
+      <input type="number" id="todayPermInput" step="0.5" min="0" max="24" value="${hoursVal}" placeholder="4" style="margin:8px 0">
+      <div class="editRow">
+        <button class="btn primary" style="padding:9px" onclick="saveEditPermission()">${t('btn_validate')}</button>
+        <button class="btn ghost" style="padding:9px" onclick="cancelEditPermission()">${t('btn_cancel')}</button>
+      </div>
+    </div>`;
+  }
+
+  if (permMin > 0) {
+    return `<div class="timeRow"><div class="timePill">
+      <div class="tp-label">${t('label_hours_off_taken')}</div>
+      <div class="tp-value">${fmtHM(permMin)}</div>
+      <button class="tp-edit" onclick="startEditPermission()">✎</button>
+    </div></div>`;
+  }
+
+  return `<button type="button" class="smallLink" onclick="startEditPermission()">${t('btn_take_hours')}</button>`;
+}
+
+function startEditPermission() {
+  todayEditingPermission = true;
+  renderToday();
+  setTimeout(() => { const el = document.getElementById('todayPermInput'); if (el) el.focus(); }, 0);
+}
+
+function cancelEditPermission() {
+  todayEditingPermission = false;
+  renderToday();
+}
+
+function saveEditPermission() {
+  const el = document.getElementById('todayPermInput');
+  if (!el) return;
+  const hours = parseFloat(el.value);
+  const minutes = Number.isFinite(hours) && hours > 0 ? Math.round(hours * 60) : 0;
+  upsertEntryForDate(todayStr(), { permission: minutes });
+  todayEditingPermission = false;
+  toast(minutes > 0 ? (t('toast_hours_off_saved') + fmtHM(minutes)) : t('toast_hours_off_removed'));
+  renderToday();
+  refreshAll();
 }
 
 function renderTimePill(field, value, label) {
@@ -858,6 +922,7 @@ function quickResetToday() {
   entries = entries.filter(x => x.date !== dateStr);
   saveEntries(entries);
   todayEditingField = null;
+  todayEditingPermission = false;
   renderToday();
   refreshAll();
 }
@@ -1144,7 +1209,7 @@ function renderHistory() {
       sub = e.notes || '';
     } else {
       title = c.hasFullEntry ? `${e.checkIn} → ${e.checkOut}` : (e.checkIn ? `${e.checkIn} → ${t('day_inprogress')}` : t('day_notpunched'));
-      sub = [c.hasFullEntry ? `${t('sg_worked')} ${fmtHM(c.workedMin)}` : '', e.notes].filter(Boolean).join(' · ');
+      sub = [c.hasFullEntry ? `${t('sg_worked')} ${fmtHM(c.workedMin)}` : '', c.permMin > 0 ? `🏃 ${t('label_hours_off_taken')} ${fmtHM(c.permMin)}` : '', e.notes].filter(Boolean).join(' · ');
     }
 
     const row = document.createElement('div');

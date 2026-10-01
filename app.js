@@ -679,11 +679,22 @@ function computeEntry(entry) {
   return { requiredMin, workedMin, hasFullEntry, diffMin, overtimeMin, permMin, netMin };
 }
 
-// running cumulation across full history, chronological order
+// clé de la période (cycle) contenant une date YYYY-MM-DD
+function periodKeyOf(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const c = new Date(y, m - 1, 1);
+  if (d < cycleStartDay()) c.setMonth(c.getMonth() - 1);
+  return c.getFullYear() * 12 + c.getMonth();
+}
+
+// cumul courant, remis à zéro à chaque début de période, ordre chronologique
 function computeCumulationMap() {
   const map = {};
   let running = 0;
+  let currentKey = null;
   for (const e of sortedEntries()) {
+    const key = periodKeyOf(e.date);
+    if (key !== currentKey) { currentKey = key; running = 0; }
     const c = computeEntry(e);
     running += c.netMin;
     map[e.id] = running;
@@ -1155,8 +1166,9 @@ function deleteEntry(id) {
 
 function updateTopBadge() {
   const map = computeCumulationMap();
-  const list = sortedEntries();
-  const last = list[list.length - 1];
+  const { startStr, endStr } = periodBounds(currentPeriodCursor());
+  const inPeriod = sortedEntries().filter(e => e.date >= startStr && e.date <= endStr);
+  const last = inPeriod[inPeriod.length - 1];
   const val = last ? map[last.id] : 0;
   const el = document.getElementById('topCumul');
   el.textContent = t('top_cumul_prefix') + fmtHM(val, true);
@@ -1245,7 +1257,7 @@ function renderDashboard() {
   document.getElementById('dash-monthLabel').textContent = periodLabel(dashCursor);
 
   const days = eachDateInPeriod(dashCursor);
-  const { endStr } = periodBounds(dashCursor);
+  const { startStr, endStr } = periodBounds(dashCursor);
   const today = todayStr();
   const entryByDate = {};
   for (const e of entries) entryByDate[e.date] = e;
@@ -1307,7 +1319,7 @@ function renderDashboard() {
 
   // cumul en fin de période = dernière valeur cumulée pour une date <= fin de période
   const cumulMap = computeCumulationMap();
-  const upTo = sortedEntries().filter(e => e.date <= endStr);
+  const upTo = sortedEntries().filter(e => e.date >= startStr && e.date <= endStr);
   const lastEntry = upTo[upTo.length - 1];
   const cumulEl = document.getElementById('s-cumul');
   const cumulVal = lastEntry ? cumulMap[lastEntry.id] : 0;
